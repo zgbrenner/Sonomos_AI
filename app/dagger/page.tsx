@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useState } from 'react';
 import SensitiveSpan from '@/components/SensitiveSpan';
 
@@ -11,9 +12,9 @@ interface DaggerResponse {
 function parseAnnotatedText(text: string): React.ReactNode[] {
   const segments: React.ReactNode[] = [];
   const regex = /<SENSITIVE type="([^"]+)" risk="([^"]+)">([^<]+)<\/SENSITIVE>/g;
-  
+
   let lastIndex = 0;
-  let match;
+  let match: RegExpExecArray | null;
   let key = 0;
 
   while ((match = regex.exec(text)) !== null) {
@@ -85,7 +86,7 @@ export default function DaggerPage() {
         body: JSON.stringify({ text: inputText }),
       });
 
-      const data = await response.json();
+      const data: DaggerResponse & { error?: string } = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to scan text');
@@ -106,48 +107,60 @@ export default function DaggerPage() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#FFFFFF',
-      padding: '2rem 1rem',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-    }}>
-      <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-      }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#FFFFFF',
+        padding: '2rem 1rem',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+        }}
+      >
         {/* Header */}
-        <header style={{
-          borderBottom: '1px solid #000',
-          paddingBottom: '2rem',
-          marginBottom: '2rem',
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '1rem',
-          }}>
+        <header
+          style={{
+            borderBottom: '1px solid #000',
+            paddingBottom: '2rem',
+            marginBottom: '2rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+            }}
+          >
             <TrafficLightIcon />
-            <h1 style={{
-              fontSize: '2.5rem',
-              fontWeight: '700',
-              margin: 0,
-              color: '#000',
-              letterSpacing: '0.05em',
-            }}>
+            <h1
+              style={{
+                fontSize: '2.5rem',
+                fontWeight: '700',
+                margin: 0,
+                color: '#000',
+                letterSpacing: '0.05em',
+              }}
+            >
               SONOMOS AI
             </h1>
           </div>
 
           {/* Navigation */}
-          <nav style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '2rem',
-            marginTop: '1rem',
-          }}>
-            
+          <nav
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '2rem',
+              marginTop: '1rem',
+            }}
+          >
+            <a
               href="/"
               style={{
                 color: '#666',
@@ -158,7 +171,7 @@ export default function DaggerPage() {
             >
               CLOAK
             </a>
-            
+            <a
               href="/dagger"
               style={{
                 color: '#000',
@@ -175,42 +188,52 @@ export default function DaggerPage() {
         </header>
 
         {/* Page Title */}
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '3rem',
-        }}>
-          <h2 style={{
-            fontSize: '2rem',
-            fontWeight: '700',
-            marginBottom: '0.5rem',
-            color: '#000',
-          }}>
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: '3rem',
+          }}
+        >
+          <h2
+            style={{
+              fontSize: '2rem',
+              fontWeight: '700',
+              marginBottom: '0.5rem',
+              color: '#000',
+            }}
+          >
             DAGGER – Inline Risk Detection
           </h2>
-          <p style={{
-            fontSize: '1.1rem',
-            color: '#666',
-            maxWidth: '700px',
-            margin: '0 auto',
-          }}>
+          <p
+            style={{
+              fontSize: '1.1rem',
+              color: '#666',
+              maxWidth: '700px',
+              margin: '0 auto',
+            }}
+          >
             See sensitive information underlined before you send it to an AI.
           </p>
         </div>
 
         {/* Main Content */}
-        <div style={{
-          maxWidth: '900px',
-          margin: '0 auto',
-        }}>
+        <div
+          style={{
+            maxWidth: '900px',
+            margin: '0 auto',
+          }}
+        >
           {/* Input Section */}
           <div style={{ marginBottom: '2rem' }}>
-            <label style={{
-              display: 'block',
-              fontWeight: '600',
-              marginBottom: '0.75rem',
-              color: '#000',
-              fontSize: '1rem',
-            }}>
+            <label
+              style={{
+                display: 'block',
+                fontWeight: '600',
+                marginBottom: '0.75rem',
+                color: '#000',
+                fontSize: '1rem',
+              }}
+            >
               Text you're about to send to an AI
             </label>
             <textarea
@@ -279,14 +302,16 @@ export default function DaggerPage() {
 
           {/* Error Display */}
           {error && (
-            <div style={{
-              backgroundColor: '#fee',
-              border: '1px solid #000',
-              borderRadius: '2px',
-              padding: '1rem',
-              marginBottom: '2rem',
-              color: '#c00',
-            }}>
+            <div
+              style={{
+                backgroundColor: '#fee',
+                border: '1px solid #000',
+                borderRadius: '2px',
+                padding: '1rem',
+                marginBottom: '2rem',
+                color: '#c00',
+              }}
+            >
               <strong>Error:</strong> {error}
             </div>
           )}
@@ -294,13 +319,15 @@ export default function DaggerPage() {
           {/* Results Section */}
           {annotatedText && (
             <div>
-              <label style={{
-                display: 'block',
-                fontWeight: '600',
-                marginBottom: '0.75rem',
-                color: '#000',
-                fontSize: '1rem',
-              }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontWeight: '600',
+                  marginBottom: '0.75rem',
+                  color: '#000',
+                  fontSize: '1rem',
+                }}
+              >
                 Detected risk (inline view)
               </label>
               <div
@@ -323,38 +350,56 @@ export default function DaggerPage() {
               </div>
 
               {/* Legend */}
-              <div style={{
-                marginTop: '1rem',
-                padding: '1rem',
-                border: '1px solid #ddd',
-                borderRadius: '2px',
-                backgroundColor: '#f9f9f9',
-              }}>
+              <div
+                style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '2px',
+                  backgroundColor: '#f9f9f9',
+                }}
+              >
                 <div style={{ fontSize: '0.85rem', color: '#333' }}>
                   <strong>Legend:</strong>
-                  <div style={{ marginTop: '0.5rem', display: 'flex', gap: '2rem' }}>
+                  <div
+                    style={{
+                      marginTop: '0.5rem',
+                      display: 'flex',
+                      gap: '2rem',
+                    }}
+                  >
                     <div>
-                      <span style={{
-                        textDecoration: 'underline',
-                        textDecorationColor: 'red',
-                        textDecorationThickness: '2px',
-                      }}>
+                      <span
+                        style={{
+                          textDecoration: 'underline',
+                          textDecorationColor: 'red',
+                          textDecorationThickness: '2px',
+                        }}
+                      >
                         Red underline
-                      </span>
-                      {' '} = High risk (payment cards, bank accounts, government IDs)
+                      </span>{' '}
+                      = High risk (payment cards, bank accounts, government IDs)
                     </div>
                     <div>
-                      <span style={{
-                        textDecoration: 'underline',
-                        textDecorationColor: 'orange',
-                        textDecorationThickness: '2px',
-                      }}>
+                      <span
+                        style={{
+                          textDecoration: 'underline',
+                          textDecorationColor: 'orange',
+                          textDecorationThickness: '2px',
+                        }}
+                      >
                         Yellow underline
-                      </span>
-                      {' '} = Medium risk (emails, phones, addresses, IDs)
+                      </span>{' '}
+                      = Medium risk (emails, phones, addresses, IDs)
                     </div>
                   </div>
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#666' }}>
+                  <div
+                    style={{
+                      marginTop: '0.5rem',
+                      fontSize: '0.8rem',
+                      color: '#666',
+                    }}
+                  >
                     Hover over any underlined text to see details.
                   </div>
                 </div>
@@ -364,28 +409,34 @@ export default function DaggerPage() {
         </div>
 
         {/* Info Section */}
-        <div style={{
-          maxWidth: '800px',
-          margin: '3rem auto 0',
-          padding: '2rem',
-          borderTop: '1px solid #000',
-          textAlign: 'center',
-        }}>
-          <h3 style={{
-            fontSize: '1.2rem',
-            fontWeight: '600',
-            marginBottom: '1rem',
-            color: '#000',
-          }}>
+        <div
+          style={{
+            maxWidth: '800px',
+            margin: '3rem auto 0',
+            padding: '2rem',
+            borderTop: '1px solid #000',
+            textAlign: 'center',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '1.2rem',
+              fontWeight: '600',
+              marginBottom: '1rem',
+              color: '#000',
+            }}
+          >
             How DAGGER Works
           </h3>
-          <p style={{
-            fontSize: '0.95rem',
-            lineHeight: '1.6',
-            color: '#333',
-          }}>
-            DAGGER scans your text and highlights sensitive information inline. Red underlines indicate high-risk data 
-            (payment cards, bank accounts, government IDs). Yellow underlines indicate medium-risk data (emails, phone numbers, 
+          <p
+            style={{
+              fontSize: '0.95rem',
+              lineHeight: '1.6',
+              color: '#333',
+            }}
+          >
+            DAGGER scans your text and highlights sensitive information inline. Red underlines indicate high-risk data
+            (payment cards, bank accounts, government IDs). Yellow underlines indicate medium-risk data (emails, phone numbers,
             addresses, order IDs). Hover over any underlined segment to see what type of information was detected.
           </p>
         </div>

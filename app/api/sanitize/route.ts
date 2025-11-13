@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the Gemini model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Construct the prompt for structured JSON response
     const systemPrompt = `You are Sonomos AI, a privacy and data-loss-prevention assistant. Your job is to detect sensitive data in text and "cloak" it with placeholders.

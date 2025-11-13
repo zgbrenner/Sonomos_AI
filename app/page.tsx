@@ -266,8 +266,6 @@ export default function Home() {
     }
   };
 
-    ? Object.values(result.stats).reduce((sum, val) => sum + val, 0)
-
   return (
     <div style={{
       minHeight: '100vh',

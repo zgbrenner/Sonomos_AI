@@ -1,396 +1,358 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 
-// Type definitions
-interface SanitizeResponse {
-  sanitized_text: string;
-  risk_level: 'LOW' | 'MEDIUM' | 'HIGH';
-  stats: {
-    emails: number;
-    phone_numbers: number;
-    addresses: number;
-    payment_cards: number;
-    bank_accounts: number;
-    order_ids: number;
-    invoice_ids: number;
-    generic_ids: number;
+type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
+interface CloakResponse {
+  sanitizedText: string;
+  stats?: Record<string, number>;
+  riskLevel?: RiskLevel;
+  error?: string;
+}
+
+// Very dumb risk calculator as a fallback if the API doesn't send riskLevel
+function computeRiskFromStats(stats?: Record<string, number>): RiskLevel {
+  if (!stats) return 'LOW';
+
+  const highKeys = ['payment_cards', 'payment_card', 'bank_accounts', 'bank_account', 'government_ids', 'ssn', 'token', 'api_keys'];
+  const mediumKeys = ['emails', 'email', 'phones', 'phone', 'addresses', 'address', 'order_ids', 'order_id', 'invoice_ids', 'invoice_id'];
+
+  let high = 0;
+  let medium = 0;
+
+  for (const [k, v] of Object.entries(stats)) {
+    if (highKeys.includes(k)) high += v;
+    else if (mediumKeys.includes(k)) medium += v;
+  }
+
+  if (high > 0 || medium >= 6) return 'HIGH';
+  if (medium >= 2) return 'MEDIUM';
+  return 'LOW';
+}
+
+function TrafficLightIcon({ risk }: { risk: RiskLevel | null }) {
+  const redOn = risk === 'HIGH';
+  const yellowOn = risk === 'MEDIUM';
+  const greenOn = risk === 'LOW' || risk === null;
+
+  const circleStyleBase: React.CSSProperties = {
+    width: 10,
+    height: 10,
+    borderRadius: '999px',
+    border: '1px solid #000',
+    backgroundColor: '#f5f5f5',
   };
-}
-
-// Traffic Light Icon Component
-function TrafficLightIcon() {
-  return (
-    <svg width="32" height="60" viewBox="0 0 32 60" style={{ marginRight: '12px' }}>
-      <rect x="4" y="0" width="24" height="60" fill="#000" rx="4" />
-      <circle cx="16" cy="12" r="6" fill="#ef4444" />
-      <circle cx="16" cy="30" r="6" fill="#f59e0b" />
-      <circle cx="16" cy="48" r="6" fill="#10b981" />
-    </svg>
-  );
-}
-
-// Risk Traffic Light Component
-function RiskTrafficLight({ risk }: { risk: 'LOW' | 'MEDIUM' | 'HIGH' | null }) {
-  if (!risk) return null;
-
-  const activeColor = {
-    LOW: '#10b981',
-    MEDIUM: '#f59e0b',
-    HIGH: '#ef4444',
-  }[risk];
 
   return (
-    <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-      <svg width="32" height="60" viewBox="0 0 32 60" style={{ margin: '0 auto' }}>
-        <rect x="4" y="0" width="24" height="60" fill="#000" rx="4" />
-        <circle cx="16" cy="12" r="6" fill={risk === 'HIGH' ? activeColor : '#333'} />
-        <circle cx="16" cy="30" r="6" fill={risk === 'MEDIUM' ? activeColor : '#333'} />
-        <circle cx="16" cy="48" r="6" fill={risk === 'LOW' ? activeColor : '#333'} />
-      </svg>
+    <div
+      style={{
+        border: '1px solid #000',
+        borderRadius: 999,
+        padding: '4px 6px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        marginRight: '12px',
+      }}
+    >
+      <span
+        style={{
+          ...circleStyleBase,
+          backgroundColor: redOn ? '#ef4444' : '#f5f5f5',
+        }}
+      />
+      <span
+        style={{
+          ...circleStyleBase,
+          backgroundColor: yellowOn ? '#facc15' : '#f5f5f5',
+        }}
+      />
+      <span
+        style={{
+          ...circleStyleBase,
+          backgroundColor: greenOn ? '#22c55e' : '#f5f5f5',
+        }}
+      />
     </div>
   );
 }
 
-// Example data
-const EXAMPLES = [
+const examples: { label: string; text: string }[] = [
   {
-    name: 'E-commerce Order',
-    text: `Help me respond to this email:
+    label: 'E-commerce order support',
+    text: `Help me reply to this customer politely:
 
-Hi Sarah, here are the details for your recent order:
+Hi,
 
-Order ID: ORD-2024-789456
-Invoice: INV-445566
-Tracking: 1Z999AA10123456784
+My name is Sarah Lopez. I placed an order last week but haven’t received a shipping update. Here are the details:
 
-Payment processed:
-Card ending in 4242
-Amount: $3,482.55
-Transaction ID: TXN-20241113-ABCD
+Order ID: 4829-ALPHA-2291
+Tracking number: 1Z 999 AA1 01 2345 6784
+Amount charged: $249.99
+Card used: 4242 4242 4242 4242
+Billing email: sarah.lopez@example.com
+Shipping address:
+123 Market Street, Apt 4B
+San Diego, CA 92101
 
-Shipping to:
-Sarah Johnson
-123 Oak Avenue, Apt 4B
-San Francisco, CA 94102
+Can you let me know when this will arrive?
 
-Contact info:
-Email: sarah.j@company.com
-Phone: (415) 555-0123
-
-Your account number is ACC-998877.
-Let me know if you need anything else!`
+Thanks,
+Sarah`,
   },
   {
-    name: 'Medical Appointment',
-    text: `Appointment Confirmation
+    label: 'Internal HR email',
+    text: `Summarize this internal HR email for our leadership team:
 
-Patient: Michael Rodriguez
-DOB: 05/15/1982
-Patient ID: MED-78945612
-SSN: 456-78-9012
+Team,
 
-Appointment Details:
-Date: November 20, 2024
-Time: 2:30 PM
-Doctor: Dr. Emily Chen
-Location: Suite 405, 789 Medical Plaza
+We completed performance reviews for the following employees:
 
-Insurance Information:
-Provider: BlueCross BlueShield
-Policy #: BC-9988776655
-Group #: GRP-445566
+- Emily Richards (Employee ID: ER-1037, emily.richards@acme-corp.com)
+- Marcus Lee (Employee ID: ML-1189, marcus.lee@acme-corp.com)
+- Priya Patel (Employee ID: PP-1244, priya.patel@acme-corp.com)
 
-Contact:
-Phone: (555) 234-5678
-Email: m.rodriguez@email.com
+Their new salary bands are:
+- Emily: $115,000
+- Marcus: $130,000
+- Priya: $142,000
 
-Please arrive 15 minutes early for check-in.`
+These changes will be reflected in payroll starting with the July 31st pay period and should be kept confidential.
+
+Regards,
+Anna
+HR Director`,
   },
   {
-    name: 'Corporate Memo',
-    text: `INTERNAL MEMO - CONFIDENTIAL
+    label: 'Legal – client email',
+    text: `I am a lawyer. Help me summarize this client email for my internal notes, but DO NOT change any of the legal meaning:
 
-To: Department Managers
-From: HR Department
-Re: Q4 Performance Reviews
+Client: Michael Torres
+Matter: Torres v. Horizon Logistics, Inc.
+Case No.: 37-2025-00048291-CU-OE-CTL
 
-Employee Information for Review:
+Email from client:
 
-1. Jennifer Williams
-   Employee ID: EMP-10234
-   Ext: 5567
-   Direct: (555) 123-9876
-   Email: j.williams@company.com
+"Hi,
 
-2. Robert Kim
-   Employee ID: EMP-10235
-   Ext: 5568
-   Direct: (555) 123-9877
-   Email: r.kim@company.com
+I just wanted to update you before our meeting. My supervisor, Karen Blake, called me into her office on 10/03/2025 and told me that 'corporate is tired of the complaints' and that my performance improvement plan will be used as a basis to terminate me if I don't 'get back in line.'
 
-Payroll Account: PA-887766
-Department Code: DEPT-450
+She also mentioned that HR (specifically Daniel Cho) already has a file on me that includes my prior complaint about unpaid overtime from February 2024. She said, 'Once this goes upstairs, they're not going to care about your so-called wage issues.'
 
-Please submit completed reviews to hr-reviews@company.com by Nov 30.
+This all happened at the Horizon Logistics warehouse located at 8921 Fulton Industrial Blvd, Suite 200, San Diego, CA 92121.
 
-Contact HR at ext. 5500 with questions.`
+Let me know what else you need from me before the deposition.
+
+Thanks,
+Michael
+michael.torres@example.com
+(555) 392-8844
+"`,
   },
-  {
-    name: 'Customer Support Ticket',
-    text: `Support Ticket #TICK-887766
-
-Customer: Amanda Peterson
-Account #: CUST-445566-AA
-Email: a.peterson@email.com
-Phone: (555) 876-5432
-
-Issue: Billing discrepancy
-
-Recent Transactions:
-- Invoice #INV-20241101-445
-  Amount: $1,250.00
-  Card: **** **** **** 8899
-  
-- Invoice #INV-20241108-446
-  Amount: $850.00
-  Card: **** **** **** 8899
-
-Customer requests refund to account ending in 3344.
-Routing #: 021000021
-
-Priority: HIGH
-Assigned to: Support Agent SA-1123
-
-Resolution needed by: Nov 15, 2024`
-  },
-  {
-    name: 'Chat Transcript',
-    text: `Customer Chat Transcript - Session ID: CHAT-20241113-9988
-
-[10:23 AM] Customer: Hi, I need help with my order
-[10:23 AM] Agent: Hello! I'd be happy to help. Can I get your order number?
-[10:24 AM] Customer: It's ORD-2024-556677
-[10:24 AM] Agent: Thank you. I see that order. Can you verify your email?
-[10:24 AM] Customer: Sure, it's john.smith@email.com
-[10:25 AM] Agent: Perfect. And the last 4 of the card used?
-[10:25 AM] Customer: 7788
-[10:25 AM] Agent: Great, found it. Card ending in 7788, amount $2,450.00
-[10:26 AM] Customer: Yes that's right
-[10:26 AM] Agent: Your tracking number is 1Z888BB20987654321
-[10:26 AM] Customer: Thanks! Can you send updates to my phone?
-[10:27 AM] Agent: Of course. What's your mobile number?
-[10:27 AM] Customer: (555) 999-8877
-[10:27 AM] Agent: Done! You'll get SMS updates.
-[10:28 AM] Customer: Perfect, thank you!
-
-Agent ID: AGT-5567
-Customer Account: ACC-778899
-Session Duration: 5 minutes`
-  }
 ];
 
-export default function Home() {
-  const [originalText, setOriginalText] = useState('');
-  const [result, setResult] = useState<SanitizeResponse | null>(null);
+export default function CloakPage() {
+  const [inputText, setInputText] = useState('');
+  const [sanitizedText, setSanitizedText] = useState('');
+  const [stats, setStats] = useState<Record<string, number> | undefined>(
+    undefined
+  );
+  const [risk, setRisk] = useState<RiskLevel | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [showExamples, setShowExamples] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleAnalyze = async () => {
-    setError('');
-    setResult(null);
-    setCopySuccess(false);
+  const handleExampleClick = (text: string) => {
+    setInputText(text);
+    setSanitizedText('');
+    setError(null);
+    setStats(undefined);
+    setRisk(null);
+  };
 
-    if (!originalText.trim()) {
-      setError('Please enter some text to analyze');
-      return;
-    }
+  const handleClear = () => {
+    setInputText('');
+    setSanitizedText('');
+    setError(null);
+    setStats(undefined);
+    setRisk(null);
+  };
 
+  const handleCloak = async () => {
+    setError(null);
+    setSanitizedText('');
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/sanitize', {
+      const res = await fetch('/api/cloak', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: originalText }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: inputText }),
       });
 
-      const data = await response.json();
+      const data: CloakResponse = await res.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to cloak text');
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to process text');
       }
 
-      setResult(data);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while cloaking the text');
+      setSanitizedText(data.sanitizedText || '');
+      setStats(data.stats);
+
+      const riskLevel =
+        data.riskLevel ?? computeRiskFromStats(data.stats ?? {});
+      setRisk(riskLevel);
+    } catch (e: any) {
+      setError(e.message ?? 'Unexpected error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCopy = async () => {
-    if (result?.sanitized_text) {
-      await navigator.clipboard.writeText(result.sanitized_text);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    }
-  };
-
-  const handleLoadExample = (example: typeof EXAMPLES[0]) => {
-    setOriginalText(example.text);
-    setResult(null);
-    setError('');
-    setShowExamples(false);
-  };
-
-  const handleClear = () => {
-    setOriginalText('');
-    setResult(null);
-    setError('');
-    setCopySuccess(false);
-  };
-
-  const getRiskMessage = (level: 'LOW' | 'MEDIUM' | 'HIGH') => {
-    switch (level) {
-      case 'LOW':
-        return 'Your text contains minimal identifiable information.';
-      case 'MEDIUM':
-        return 'Some sensitive details were detected and have been cloaked.';
-      case 'HIGH':
-        return 'High-risk data was detected. You should avoid sending the original text to any AI system.';
-    }
-  };
+  const totalRedacted =
+    stats != null
+      ? Object.values(stats).reduce((sum, val) => sum + (val || 0), 0)
+      : 0;
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#FFFFFF',
-      padding: '2rem 1rem',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-    }}>
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-      }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#FFFFFF',
+        padding: '2rem 1rem',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}
+    >
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {/* Header */}
-        <header style={{
-          textAlign: 'center',
-          marginBottom: '3rem',
-          borderBottom: '1px solid #000',
-          paddingBottom: '2rem',
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '1rem',
-          }}>
-            <TrafficLightIcon />
-            <h1 style={{
-              fontSize: '2.5rem',
-              fontWeight: '700',
-              margin: 0,
-              color: '#000',
-              letterSpacing: '0.05em',
-            }}>
+        <header
+          style={{
+            borderBottom: '1px solid #000',
+            paddingBottom: '2rem',
+            marginBottom: '2rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+            }}
+          >
+            <TrafficLightIcon risk={risk} />
+            <h1
+              style={{
+                fontSize: '2.5rem',
+                fontWeight: 700,
+                margin: 0,
+                color: '#000',
+                letterSpacing: '0.05em',
+              }}
+            >
               SONOMOS AI
             </h1>
           </div>
 
-          {/* Navigation */}
-          <nav style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '2rem',
-            marginTop: '1.5rem',
-            marginBottom: '1rem',
-          }}>
-            
+          {/* Nav */}
+          <nav
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '2rem',
+              marginTop: '1rem',
+            }}
+          >
+            <a
               href="/"
               style={{
                 color: '#000',
                 textDecoration: 'none',
                 fontSize: '1rem',
-                fontWeight: '700',
+                fontWeight: 700,
                 borderBottom: '2px solid #000',
                 paddingBottom: '2px',
               }}
             >
               CLOAK
             </a>
-            
+            <a
               href="/dagger"
               style={{
                 color: '#666',
                 textDecoration: 'none',
                 fontSize: '1rem',
-                fontWeight: '500',
+                fontWeight: 500,
               }}
             >
               DAGGER
             </a>
           </nav>
-
-          <p style={{
-            fontSize: '1.1rem',
-            color: '#333',
-            margin: '0.5rem auto 0',
-            maxWidth: '600px',
-          }}>
-            Cloak your data before the AI sees it.
-          </p>
-          <p style={{
-            fontSize: '0.95rem',
-            color: '#666',
-            margin: '0.5rem auto 0',
-            maxWidth: '700px',
-          }}>
-            Automatically detect and hide sensitive information before sending to ChatGPT, Gemini, or any AI system.
-          </p>
         </header>
 
-        {/* Main Content */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-          gap: '2rem',
-          marginBottom: '2rem',
-        }}>
-          {/* Left Panel - Original Text */}
-          <div>
-            <label style={{
-              display: 'block',
-              fontWeight: '600',
-              marginBottom: '0.75rem',
+        {/* Title + blurb */}
+        <div
+          style={{
+            textAlign: 'center',
+            marginBottom: '3rem',
+          }}
+        >
+          <h2
+            style={{
+              fontSize: '2rem',
+              fontWeight: 700,
+              marginBottom: '0.5rem',
               color: '#000',
-              fontSize: '1rem',
-            }}>
-              Original text
-              <span style={{
+            }}
+          >
+            CLOAK – Obfuscate Sensitive Data Before the AI Sees It
+          </h2>
+          <p
+            style={{
+              fontSize: '1.1rem',
+              color: '#666',
+              maxWidth: 700,
+              margin: '0 auto',
+            }}
+          >
+            Paste your prompt here. CLOAK will replace high-risk details with
+            placeholders so you can still get useful output without oversharing.
+          </p>
+        </div>
+
+        {/* Main layout: left input / right output + risk */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.1fr 0.9fr',
+            gap: '2rem',
+            maxWidth: 1100,
+            margin: '0 auto',
+          }}
+        >
+          {/* Left: Input + examples */}
+          <div>
+            <label
+              style={{
                 display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '400',
-                color: '#666',
-                marginTop: '0.25rem',
-              }}>
-                (what you were going to paste into ChatGPT / Gemini / etc.)
-              </span>
+                fontWeight: 600,
+                marginBottom: '0.75rem',
+                color: '#000',
+                fontSize: '1rem',
+              }}
+            >
+              Original text
             </label>
             <textarea
-              value={originalText}
-              onChange={(e) => setOriginalText(e.target.value)}
-              placeholder="Paste your text here..."
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder={`Help me respond to this email... (you can safely paste the original text here, CLOAK will obfuscate sensitive pieces before they ever hit the AI).`}
               style={{
                 width: '100%',
-                minHeight: '320px',
+                minHeight: '220px',
                 padding: '1rem',
                 border: '1px solid #000',
-                borderRadius: '2px',
+                borderRadius: 2,
                 fontSize: '0.9rem',
                 fontFamily: 'monospace',
                 resize: 'vertical',
@@ -399,33 +361,31 @@ export default function Home() {
                 color: '#000',
               }}
             />
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.75rem',
+                marginBottom: '1rem',
+              }}
+            >
               <button
-                onClick={handleAnalyze}
-                disabled={isLoading || !originalText.trim()}
+                onClick={handleCloak}
+                disabled={isLoading || !inputText.trim()}
                 style={{
-                  flex: '1',
-                  minWidth: '140px',
+                  flex: 1,
                   padding: '0.75rem 1.5rem',
                   backgroundColor: isLoading ? '#ccc' : '#000',
                   color: '#fff',
                   border: 'none',
-                  borderRadius: '2px',
+                  borderRadius: 2,
                   fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                  cursor: isLoading || !inputText.trim() ? 'not-allowed' : 'pointer',
                   transition: 'opacity 0.2s',
                 }}
-                onMouseEnter={(e) => {
-                  if (!isLoading && originalText.trim()) {
-                    e.currentTarget.style.opacity = '0.8';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
               >
-                {isLoading ? 'Analyzing...' : 'Analyze & Cloak'}
+                {isLoading ? 'CLOAKING…' : 'CLOAK THIS PROMPT'}
               </button>
               <button
                 onClick={handleClear}
@@ -435,9 +395,9 @@ export default function Home() {
                   backgroundColor: '#fff',
                   color: '#000',
                   border: '1px solid #000',
-                  borderRadius: '2px',
+                  borderRadius: 2,
                   fontSize: '0.95rem',
-                  fontWeight: '600',
+                  fontWeight: 600,
                   cursor: isLoading ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -445,272 +405,175 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Examples Section */}
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => setShowExamples(!showExamples)}
+            {/* Examples */}
+            <div
+              style={{
+                border: '1px solid #000',
+                padding: '0.75rem',
+                borderRadius: 2,
+              }}
+            >
+              <div
                 style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  backgroundColor: '#fff',
-                  color: '#000',
-                  border: '1px solid #000',
-                  borderRadius: '2px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  marginBottom: '0.5rem',
                 }}
               >
-                <span>Load Example</span>
-                <span>{showExamples ? '▲' : '▼'}</span>
-              </button>
-              
-              {showExamples && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  backgroundColor: '#fff',
-                  border: '1px solid #000',
-                  borderTop: 'none',
-                  zIndex: 10,
-                  maxHeight: '300px',
-                  overflowY: 'auto',
-                }}>
-                  {EXAMPLES.map((example, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleLoadExample(example)}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem 1rem',
-                        backgroundColor: '#fff',
-                        color: '#000',
-                        border: 'none',
-                        borderBottom: index < EXAMPLES.length - 1 ? '1px solid #ddd' : 'none',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        transition: 'background-color 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f5f5f5';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#fff';
-                      }}
-                    >
-                      <strong>{example.name}</strong>
-                    </button>
-                  ))}
-                </div>
-              )}
+                Try an example:
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                  fontSize: '0.85rem',
+                }}
+              >
+                {examples.map((ex) => (
+                  <button
+                    key={ex.label}
+                    type="button"
+                    onClick={() => handleExampleClick(ex.text)}
+                    style={{
+                      padding: '0.35rem 0.7rem',
+                      border: '1px solid #000',
+                      backgroundColor: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {ex.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Right Panel - Cloaked Text & Risk Summary */}
+          {/* Right: Output + risk */}
           <div>
-            <label style={{
-              display: 'block',
-              fontWeight: '600',
-              marginBottom: '0.75rem',
-              color: '#000',
-              fontSize: '1rem',
-            }}>
-              Cloaked text
-              <span style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '400',
-                color: '#666',
-                marginTop: '0.25rem',
-              }}>
-                (safe to paste into your AI)
-              </span>
-            </label>
+            {/* Risk panel */}
             <div
               style={{
-                width: '100%',
-                minHeight: '320px',
-                padding: '1rem',
                 border: '1px solid #000',
-                borderRadius: '2px',
-                fontSize: '0.9rem',
-                fontFamily: 'monospace',
-                backgroundColor: '#f9f9f9',
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word',
-                marginBottom: '1rem',
-                overflow: 'auto',
-                color: '#000',
+                borderRadius: 2,
+                padding: '1rem',
+                marginBottom: '1.5rem',
               }}
             >
-              {result?.sanitized_text || (isLoading ? 'Analyzing and cloaking sensitive data...' : 'Your cloaked text will appear here')}
-            </div>
-            {result && (
-              <button
-                onClick={handleCopy}
+              <div
                 style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  backgroundColor: copySuccess ? '#10b981' : '#000',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '2px',
-                  fontSize: '0.95rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginBottom: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.5rem',
                 }}
               >
-                {copySuccess ? '✓ Copied!' : 'Copy Cloaked Text'}
-              </button>
-            )}
+                <span
+                  style={{
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  Risk summary
+                </span>
+                <TrafficLightIcon risk={risk} />
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#333' }}>
+                {risk === null && (
+                  <span>Run CLOAK to see a risk summary for this prompt.</span>
+                )}
+                {risk === 'LOW' && (
+                  <span>
+                    <strong>Low overall risk.</strong> Minor identifiers only or everything already looks fairly clean.
+                  </span>
+                )}
+                {risk === 'MEDIUM' && (
+                  <span>
+                    <strong>Medium overall risk.</strong> Contains several
+                    personal identifiers (emails, phone numbers, addresses or IDs).
+                    CLOAK helps, but review before sending.
+                  </span>
+                )}
+                {risk === 'HIGH' && (
+                  <span>
+                    <strong>High overall risk.</strong> Contains financial or
+                    highly sensitive identifiers (payment cards, bank accounts,
+                    government IDs, tokens). Strongly consider trimming the
+                    source text.
+                  </span>
+                )}
+              </div>
+              <div
+                style={{
+                  marginTop: '0.5rem',
+                  fontSize: '0.8rem',
+                  color: '#555',
+                }}
+              >
+                Total items replaced: <strong>{totalRedacted}</strong>
+              </div>
+            </div>
 
-            {/* Risk Summary Panel */}
-            {result && (
-              <div style={{
-                backgroundColor: '#fff',
-                borderRadius: '2px',
-                padding: '1.5rem',
-                border: '1px solid #000',
-              }}>
-                <RiskTrafficLight risk={result.risk_level} />
-                
-                <h3 style={{
-                  fontSize: '1.1rem',
-                  fontWeight: '700',
+            {/* Sanitized output */}
+            <div>
+              <label
+                style={{
+                  display: 'block',
+                  fontWeight: 600,
                   marginBottom: '0.75rem',
                   color: '#000',
-                  textAlign: 'center',
-                }}>
-                  Risk Summary
-                </h3>
-                
-                <p style={{
-                  fontSize: '0.95rem',
-                  color: '#333',
-                  marginBottom: '1.25rem',
-                  textAlign: 'center',
-                  lineHeight: '1.5',
-                }}>
-                  {getRiskMessage(result.risk_level)}
-                </p>
-
-                <div style={{
-                  backgroundColor: '#f9f9f9',
-                  borderRadius: '2px',
+                  fontSize: '1rem',
+                }}
+              >
+                Cloaked text
+              </label>
+              <div
+                style={{
+                  width: '100%',
+                  minHeight: '220px',
                   padding: '1rem',
-                  marginBottom: '1rem',
-                  border: '1px solid #ddd',
-                }}>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr auto',
-                    gap: '0.75rem',
-                    fontSize: '0.9rem',
-                  }}>
-                    <div>Emails redacted:</div>
-                    <div style={{ fontWeight: '600' }}>{result.stats.emails}</div>
-                    
-                    <div>Phone numbers redacted:</div>
-                    <div style={{ fontWeight: '600' }}>{result.stats.phone_numbers}</div>
-                    
-                    <div>Addresses redacted:</div>
-                    <div style={{ fontWeight: '600' }}>{result.stats.addresses}</div>
-                    
-                    <div>Payment cards redacted:</div>
-                    <div style={{ fontWeight: '600' }}>{result.stats.payment_cards}</div>
-                    
-                    <div>Bank accounts redacted:</div>
-                    <div style={{ fontWeight: '600' }}>{result.stats.bank_accounts}</div>
-                    
-                    <div>Order IDs redacted:</div>
-                    <div style={{ fontWeight: '600' }}>{result.stats.order_ids}</div>
-                    
-                    <div>Invoice IDs redacted:</div>
-                    <div style={{ fontWeight: '600' }}>{result.stats.invoice_ids}</div>
-                    
-                    <div>Generic IDs redacted:</div>
-                    <div style={{ fontWeight: '600' }}>{result.stats.generic_ids}</div>
-                    
-                    <div style={{ 
-                      borderTop: '1px solid #000',
-                      paddingTop: '0.75rem',
-                      marginTop: '0.5rem',
-                      fontWeight: '700',
-                    }}>
-                      Total items cloaked:
-                    </div>
-                    <div style={{
-                      borderTop: '1px solid #000',
-                      paddingTop: '0.75rem',
-                      marginTop: '0.5rem',
-                      fontWeight: '700',
-                      fontSize: '1.1rem',
-                    }}>
-                      {totalRedacted}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{
-                  fontSize: '0.8rem',
-                  color: '#666',
-                  textAlign: 'center',
-                  lineHeight: '1.4',
-                }}>
-                  Sonomos AI does not store or transmit your original input. Sanitization happens server-side only.
-                </div>
+                  border: '1px solid #000',
+                  borderRadius: 2,
+                  fontSize: '0.9rem',
+                  fontFamily: 'monospace',
+                  backgroundColor: '#FFF',
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word',
+                  color: '#000',
+                }}
+              >
+                {error && (
+                  <span style={{ color: '#c00' }}>
+                    <strong>Error:</strong> {error}
+                  </span>
+                )}
+                {!error && !sanitizedText && (
+                  <span style={{ color: '#666' }}>
+                    CLOAK output will appear here. You can copy and paste this
+                    into your favorite AI tool.
+                  </span>
+                )}
+                {!error && sanitizedText && <>{sanitizedText}</>}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
-        {/* Error Display */}
-        {error && (
-          <div style={{
-            backgroundColor: '#fee',
-            border: '1px solid #000',
-            borderRadius: '2px',
-            padding: '1rem',
-            marginBottom: '2rem',
-            color: '#c00',
-          }}>
-            <strong>Error:</strong> {error}
-          </div>
-        )}
-
-        {/* How It Works Section */}
-        <div style={{
-          maxWidth: '800px',
-          margin: '3rem auto 0',
-          padding: '2rem',
-          borderTop: '1px solid #000',
-          textAlign: 'center',
-        }}>
-          <h3 style={{
-            fontSize: '1.2rem',
-            fontWeight: '600',
-            marginBottom: '1rem',
-            color: '#000',
-          }}>
-            How It Works
-          </h3>
-          <p style={{
-            fontSize: '0.95rem',
-            lineHeight: '1.6',
-            color: '#333',
-          }}>
-            Sonomos AI uses advanced AI to detect emails, phone numbers, payment details, IDs, and other sensitive data in your text. 
-            It replaces them with placeholders or masks them before you send to ChatGPT, Gemini, or any AI system. 
-            We only show counts and placeholders—never store or show your raw data.
-          </p>
+        {/* Tiny footer/explanation */}
+        <div
+          style={{
+            maxWidth: 800,
+            margin: '3rem auto 0',
+            padding: '2rem 0 1rem',
+            borderTop: '1px solid #000',
+            textAlign: 'center',
+            fontSize: '0.9rem',
+            color: '#444',
+          }}
+        >
+          CLOAK is a prototype: it obfuscates obvious high-risk fields before your
+          prompt ever reaches a model, so you can keep using powerful AI systems
+          without giving them raw client, employee, or financial details.
         </div>
       </div>
     </div>

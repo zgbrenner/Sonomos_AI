@@ -266,7 +266,6 @@ export default function Home() {
     }
   };
 
-  const totalRedacted = result
     ? Object.values(result.stats).reduce((sum, val) => sum + val, 0)
 
   return (

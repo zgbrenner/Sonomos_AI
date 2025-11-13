@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Initialize Gemini API
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'AIzaSyDGKbc8CljdjhBDQOnUbOYmUKwqvMZ9Xfc');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // Type definitions for the response
 interface SanitizeResponse {

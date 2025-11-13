@@ -305,6 +305,41 @@ export default function Home() {
               SONOMOS AI
             </h1>
           </div>
+
+          {/* Navigation */}
+          <nav style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '2rem',
+            marginTop: '1.5rem',
+            marginBottom: '1rem',
+          }}>
+            
+              href="/"
+              style={{
+                color: '#000',
+                textDecoration: 'none',
+                fontSize: '1rem',
+                fontWeight: '700',
+                borderBottom: '2px solid #000',
+                paddingBottom: '2px',
+              }}
+            >
+              CLOAK
+            </a>
+            
+              href="/dagger"
+              style={{
+                color: '#666',
+                textDecoration: 'none',
+                fontSize: '1rem',
+                fontWeight: '500',
+              }}
+            >
+              DAGGER
+            </a>
+          </nav>
+
           <p style={{
             fontSize: '1.1rem',
             color: '#333',

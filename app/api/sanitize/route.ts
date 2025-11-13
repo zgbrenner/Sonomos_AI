@@ -122,10 +122,8 @@ ${text}
 
 Remember: Respond with ONLY the JSON object. No markdown formatting, no code blocks, no explanations.`;
 
-    // Call Gemini API
-    const result = await model.generateContent([
-      { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }
-    ]);
+    // Call Gemini API - FIXED VERSION
+    const result = await model.generateContent(systemPrompt + '\n\n' + userPrompt);
 
     const response = await result.response;
     let responseText = response.text();

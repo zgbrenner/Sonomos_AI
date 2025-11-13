@@ -18,36 +18,45 @@ interface SanitizeResponse {
   };
 }
 
-// Traffic Light Component
-function TrafficLight({ risk }: { risk: 'LOW' | 'MEDIUM' | 'HIGH' | null }) {
+// Traffic Light Icon Component
+function TrafficLightIcon() {
+  return (
+    <svg width="32" height="60" viewBox="0 0 32 60" style={{ marginRight: '12px' }}>
+      <rect x="4" y="0" width="24" height="60" fill="#000" rx="4" />
+      <circle cx="16" cy="12" r="6" fill="#ef4444" />
+      <circle cx="16" cy="30" r="6" fill="#f59e0b" />
+      <circle cx="16" cy="48" r="6" fill="#10b981" />
+    </svg>
+  );
+}
+
+// Risk Traffic Light Component
+function RiskTrafficLight({ risk }: { risk: 'LOW' | 'MEDIUM' | 'HIGH' | null }) {
   if (!risk) return null;
 
-  const colors = {
-    LOW: '#10b981',    // green
-    MEDIUM: '#f59e0b', // yellow/amber
-    HIGH: '#ef4444',   // red
-  };
+  const activeColor = {
+    LOW: '#10b981',
+    MEDIUM: '#f59e0b',
+    HIGH: '#ef4444',
+  }[risk];
 
   return (
     <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-      <div
-        style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '50%',
-          backgroundColor: colors[risk],
-          margin: '0 auto',
-          boxShadow: `0 0 12px ${colors[risk]}40`,
-          border: '3px solid white',
-          outline: `2px solid ${colors[risk]}`,
-        }}
-      />
+      <svg width="32" height="60" viewBox="0 0 32 60" style={{ margin: '0 auto' }}>
+        <rect x="4" y="0" width="24" height="60" fill="#000" rx="4" />
+        <circle cx="16" cy="12" r="6" fill={risk === 'HIGH' ? activeColor : '#333'} />
+        <circle cx="16" cy="30" r="6" fill={risk === 'MEDIUM' ? activeColor : '#333'} />
+        <circle cx="16" cy="48" r="6" fill={risk === 'LOW' ? activeColor : '#333'} />
+      </svg>
     </div>
   );
 }
 
-// Example data for demo
-const EXAMPLE_TEXT = `Help me respond to this email:
+// Example data
+const EXAMPLES = [
+  {
+    name: 'E-commerce Order',
+    text: `Help me respond to this email:
 
 Hi Sarah, here are the details for your recent order:
 
@@ -70,7 +79,116 @@ Email: sarah.j@company.com
 Phone: (415) 555-0123
 
 Your account number is ACC-998877.
-Let me know if you need anything else!`;
+Let me know if you need anything else!`
+  },
+  {
+    name: 'Medical Appointment',
+    text: `Appointment Confirmation
+
+Patient: Michael Rodriguez
+DOB: 05/15/1982
+Patient ID: MED-78945612
+SSN: 456-78-9012
+
+Appointment Details:
+Date: November 20, 2024
+Time: 2:30 PM
+Doctor: Dr. Emily Chen
+Location: Suite 405, 789 Medical Plaza
+
+Insurance Information:
+Provider: BlueCross BlueShield
+Policy #: BC-9988776655
+Group #: GRP-445566
+
+Contact:
+Phone: (555) 234-5678
+Email: m.rodriguez@email.com
+
+Please arrive 15 minutes early for check-in.`
+  },
+  {
+    name: 'Corporate Memo',
+    text: `INTERNAL MEMO - CONFIDENTIAL
+
+To: Department Managers
+From: HR Department
+Re: Q4 Performance Reviews
+
+Employee Information for Review:
+
+1. Jennifer Williams
+   Employee ID: EMP-10234
+   Ext: 5567
+   Direct: (555) 123-9876
+   Email: j.williams@company.com
+
+2. Robert Kim
+   Employee ID: EMP-10235
+   Ext: 5568
+   Direct: (555) 123-9877
+   Email: r.kim@company.com
+
+Payroll Account: PA-887766
+Department Code: DEPT-450
+
+Please submit completed reviews to hr-reviews@company.com by Nov 30.
+
+Contact HR at ext. 5500 with questions.`
+  },
+  {
+    name: 'Customer Support Ticket',
+    text: `Support Ticket #TICK-887766
+
+Customer: Amanda Peterson
+Account #: CUST-445566-AA
+Email: a.peterson@email.com
+Phone: (555) 876-5432
+
+Issue: Billing discrepancy
+
+Recent Transactions:
+- Invoice #INV-20241101-445
+  Amount: $1,250.00
+  Card: **** **** **** 8899
+  
+- Invoice #INV-20241108-446
+  Amount: $850.00
+  Card: **** **** **** 8899
+
+Customer requests refund to account ending in 3344.
+Routing #: 021000021
+
+Priority: HIGH
+Assigned to: Support Agent SA-1123
+
+Resolution needed by: Nov 15, 2024`
+  },
+  {
+    name: 'Chat Transcript',
+    text: `Customer Chat Transcript - Session ID: CHAT-20241113-9988
+
+[10:23 AM] Customer: Hi, I need help with my order
+[10:23 AM] Agent: Hello! I'd be happy to help. Can I get your order number?
+[10:24 AM] Customer: It's ORD-2024-556677
+[10:24 AM] Agent: Thank you. I see that order. Can you verify your email?
+[10:24 AM] Customer: Sure, it's john.smith@email.com
+[10:25 AM] Agent: Perfect. And the last 4 of the card used?
+[10:25 AM] Customer: 7788
+[10:25 AM] Agent: Great, found it. Card ending in 7788, amount $2,450.00
+[10:26 AM] Customer: Yes that's right
+[10:26 AM] Agent: Your tracking number is 1Z888BB20987654321
+[10:26 AM] Customer: Thanks! Can you send updates to my phone?
+[10:27 AM] Agent: Of course. What's your mobile number?
+[10:27 AM] Customer: (555) 999-8877
+[10:27 AM] Agent: Done! You'll get SMS updates.
+[10:28 AM] Customer: Perfect, thank you!
+
+Agent ID: AGT-5567
+Customer Account: ACC-778899
+Session Duration: 5 minutes`
+  }
+];
 
 export default function Home() {
   const [originalText, setOriginalText] = useState('');
@@ -78,6 +196,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
+  const [showExamples, setShowExamples] = useState(false);
 
   const handleAnalyze = async () => {
     setError('');
@@ -122,10 +241,11 @@ export default function Home() {
     }
   };
 
-  const handleLoadExample = () => {
-    setOriginalText(EXAMPLE_TEXT);
+  const handleLoadExample = (example: typeof EXAMPLES[0]) => {
+    setOriginalText(example.text);
     setResult(null);
     setError('');
+    setShowExamples(false);
   };
 
   const handleClear = () => {
@@ -153,8 +273,9 @@ export default function Home() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      backgroundColor: '#FFFFFF',
       padding: '2rem 1rem',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
       <div style={{
         maxWidth: '1400px',
@@ -164,29 +285,39 @@ export default function Home() {
         <header style={{
           textAlign: 'center',
           marginBottom: '3rem',
-          color: 'white',
+          borderBottom: '1px solid #000',
+          paddingBottom: '2rem',
         }}>
-          <h1 style={{
-            fontSize: '3rem',
-            fontWeight: '800',
-            marginBottom: '0.5rem',
-            textShadow: '0 2px 10px rgba(0,0,0,0.2)',
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '1rem',
           }}>
-            🛡️ Sonomos AI
-          </h1>
+            <TrafficLightIcon />
+            <h1 style={{
+              fontSize: '2.5rem',
+              fontWeight: '700',
+              margin: 0,
+              color: '#000',
+              letterSpacing: '0.05em',
+            }}>
+              SONOMOS AI
+            </h1>
+          </div>
           <p style={{
-            fontSize: '1.25rem',
-            fontWeight: '500',
-            marginBottom: '0.5rem',
-            opacity: 0.95,
+            fontSize: '1.1rem',
+            color: '#333',
+            margin: '0.5rem auto 0',
+            maxWidth: '600px',
           }}>
             Cloak your data before the AI sees it.
           </p>
           <p style={{
-            fontSize: '1rem',
-            opacity: 0.85,
-            maxWidth: '600px',
-            margin: '0 auto',
+            fontSize: '0.95rem',
+            color: '#666',
+            margin: '0.5rem auto 0',
+            maxWidth: '700px',
           }}>
             Automatically detect and hide sensitive information before sending to ChatGPT, Gemini, or any AI system.
           </p>
@@ -195,23 +326,18 @@ export default function Home() {
         {/* Main Content */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
           gap: '2rem',
           marginBottom: '2rem',
         }}>
           {/* Left Panel - Original Text */}
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          }}>
+          <div>
             <label style={{
               display: 'block',
               fontWeight: '600',
               marginBottom: '0.75rem',
-              color: '#333',
-              fontSize: '1.1rem',
+              color: '#000',
+              fontSize: '1rem',
             }}>
               Original text
               <span style={{
@@ -227,100 +353,143 @@ export default function Home() {
             <textarea
               value={originalText}
               onChange={(e) => setOriginalText(e.target.value)}
-              placeholder="Hi, here are the order details:&#10;Order ID: 123-456-789&#10;Card: 4242 4242 4242 4242&#10;Email: customer@email.com&#10;..."
+              placeholder="Paste your text here..."
               style={{
                 width: '100%',
                 minHeight: '320px',
                 padding: '1rem',
-                border: '2px solid #e5e7eb',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
+                border: '1px solid #000',
+                borderRadius: '2px',
+                fontSize: '0.9rem',
                 fontFamily: 'monospace',
                 resize: 'vertical',
                 marginBottom: '1rem',
+                backgroundColor: '#FFF',
+                color: '#000',
               }}
             />
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
               <button
                 onClick={handleAnalyze}
                 disabled={isLoading || !originalText.trim()}
                 style={{
                   flex: '1',
                   minWidth: '140px',
-                  padding: '0.875rem 1.5rem',
-                  backgroundColor: isLoading ? '#9ca3af' : '#7c3aed',
-                  color: 'white',
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: isLoading ? '#ccc' : '#000',
+                  color: '#fff',
                   border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
+                  borderRadius: '2px',
+                  fontSize: '0.95rem',
                   fontWeight: '600',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  transition: 'opacity 0.2s',
                 }}
                 onMouseEnter={(e) => {
                   if (!isLoading && originalText.trim()) {
-                    e.currentTarget.style.backgroundColor = '#6d28d9';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.opacity = '0.8';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = isLoading ? '#9ca3af' : '#7c3aed';
-                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.opacity = '1';
                 }}
               >
-                {isLoading ? '🔍 Analyzing...' : '🔒 Analyze & Cloak'}
-              </button>
-              <button
-                onClick={handleLoadExample}
-                disabled={isLoading}
-                style={{
-                  padding: '0.875rem 1.25rem',
-                  backgroundColor: 'white',
-                  color: '#7c3aed',
-                  border: '2px solid #7c3aed',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                📝 Load Example
+                {isLoading ? 'Analyzing...' : 'Analyze & Cloak'}
               </button>
               <button
                 onClick={handleClear}
                 disabled={isLoading}
                 style={{
-                  padding: '0.875rem 1.25rem',
-                  backgroundColor: 'white',
-                  color: '#666',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
+                  padding: '0.75rem 1.25rem',
+                  backgroundColor: '#fff',
+                  color: '#000',
+                  border: '1px solid #000',
+                  borderRadius: '2px',
+                  fontSize: '0.95rem',
                   fontWeight: '600',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s',
                 }}
               >
                 Clear
               </button>
             </div>
+
+            {/* Examples Section */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowExamples(!showExamples)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: '#fff',
+                  color: '#000',
+                  border: '1px solid #000',
+                  borderRadius: '2px',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span>Load Example</span>
+                <span>{showExamples ? '▲' : '▼'}</span>
+              </button>
+              
+              {showExamples && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: '#fff',
+                  border: '1px solid #000',
+                  borderTop: 'none',
+                  zIndex: 10,
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                }}>
+                  {EXAMPLES.map((example, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleLoadExample(example)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        backgroundColor: '#fff',
+                        color: '#000',
+                        border: 'none',
+                        borderBottom: index < EXAMPLES.length - 1 ? '1px solid #ddd' : 'none',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f5f5f5';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#fff';
+                      }}
+                    >
+                      <strong>{example.name}</strong>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Panel - Cloaked Text & Risk Summary */}
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          }}>
+          <div>
             <label style={{
               display: 'block',
               fontWeight: '600',
               marginBottom: '0.75rem',
-              color: '#333',
-              fontSize: '1.1rem',
+              color: '#000',
+              fontSize: '1rem',
             }}>
               Cloaked text
               <span style={{
@@ -338,15 +507,16 @@ export default function Home() {
                 width: '100%',
                 minHeight: '320px',
                 padding: '1rem',
-                border: '2px solid #e5e7eb',
-                borderRadius: '8px',
-                fontSize: '0.95rem',
+                border: '1px solid #000',
+                borderRadius: '2px',
+                fontSize: '0.9rem',
                 fontFamily: 'monospace',
-                backgroundColor: '#f9fafb',
+                backgroundColor: '#f9f9f9',
                 whiteSpace: 'pre-wrap',
                 wordWrap: 'break-word',
                 marginBottom: '1rem',
                 overflow: 'auto',
+                color: '#000',
               }}
             >
               {result?.sanitized_text || (isLoading ? 'Analyzing and cloaking sensitive data...' : 'Your cloaked text will appear here')}
@@ -356,37 +526,36 @@ export default function Home() {
                 onClick={handleCopy}
                 style={{
                   width: '100%',
-                  padding: '0.875rem',
-                  backgroundColor: copySuccess ? '#10b981' : '#3b82f6',
-                  color: 'white',
+                  padding: '0.75rem',
+                  backgroundColor: copySuccess ? '#10b981' : '#000',
+                  color: '#fff',
                   border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
+                  borderRadius: '2px',
+                  fontSize: '0.95rem',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
                   marginBottom: '1.5rem',
                 }}
               >
-                {copySuccess ? '✓ Copied!' : '📋 Copy Cloaked Text'}
+                {copySuccess ? '✓ Copied!' : 'Copy Cloaked Text'}
               </button>
             )}
 
             {/* Risk Summary Panel */}
             {result && (
               <div style={{
-                backgroundColor: '#f8fafc',
-                borderRadius: '8px',
+                backgroundColor: '#fff',
+                borderRadius: '2px',
                 padding: '1.5rem',
-                border: '2px solid #e2e8f0',
+                border: '1px solid #000',
               }}>
-                <TrafficLight risk={result.risk_level} />
+                <RiskTrafficLight risk={result.risk_level} />
                 
                 <h3 style={{
                   fontSize: '1.1rem',
                   fontWeight: '700',
                   marginBottom: '0.75rem',
-                  color: '#333',
+                  color: '#000',
                   textAlign: 'center',
                 }}>
                   Risk Summary
@@ -394,7 +563,7 @@ export default function Home() {
                 
                 <p style={{
                   fontSize: '0.95rem',
-                  color: '#555',
+                  color: '#333',
                   marginBottom: '1.25rem',
                   textAlign: 'center',
                   lineHeight: '1.5',
@@ -403,10 +572,11 @@ export default function Home() {
                 </p>
 
                 <div style={{
-                  backgroundColor: 'white',
-                  borderRadius: '6px',
+                  backgroundColor: '#f9f9f9',
+                  borderRadius: '2px',
                   padding: '1rem',
                   marginBottom: '1rem',
+                  border: '1px solid #ddd',
                 }}>
                   <div style={{
                     display: 'grid',
@@ -414,32 +584,32 @@ export default function Home() {
                     gap: '0.75rem',
                     fontSize: '0.9rem',
                   }}>
-                    <div><strong>Emails redacted:</strong></div>
-                    <div style={{ fontWeight: '600', color: '#7c3aed' }}>{result.stats.emails}</div>
+                    <div>Emails redacted:</div>
+                    <div style={{ fontWeight: '600' }}>{result.stats.emails}</div>
                     
-                    <div><strong>Phone numbers redacted:</strong></div>
-                    <div style={{ fontWeight: '600', color: '#7c3aed' }}>{result.stats.phone_numbers}</div>
+                    <div>Phone numbers redacted:</div>
+                    <div style={{ fontWeight: '600' }}>{result.stats.phone_numbers}</div>
                     
-                    <div><strong>Addresses redacted:</strong></div>
-                    <div style={{ fontWeight: '600', color: '#7c3aed' }}>{result.stats.addresses}</div>
+                    <div>Addresses redacted:</div>
+                    <div style={{ fontWeight: '600' }}>{result.stats.addresses}</div>
                     
-                    <div><strong>Payment cards redacted:</strong></div>
-                    <div style={{ fontWeight: '600', color: '#7c3aed' }}>{result.stats.payment_cards}</div>
+                    <div>Payment cards redacted:</div>
+                    <div style={{ fontWeight: '600' }}>{result.stats.payment_cards}</div>
                     
-                    <div><strong>Bank accounts redacted:</strong></div>
-                    <div style={{ fontWeight: '600', color: '#7c3aed' }}>{result.stats.bank_accounts}</div>
+                    <div>Bank accounts redacted:</div>
+                    <div style={{ fontWeight: '600' }}>{result.stats.bank_accounts}</div>
                     
-                    <div><strong>Order IDs redacted:</strong></div>
-                    <div style={{ fontWeight: '600', color: '#7c3aed' }}>{result.stats.order_ids}</div>
+                    <div>Order IDs redacted:</div>
+                    <div style={{ fontWeight: '600' }}>{result.stats.order_ids}</div>
                     
-                    <div><strong>Invoice IDs redacted:</strong></div>
-                    <div style={{ fontWeight: '600', color: '#7c3aed' }}>{result.stats.invoice_ids}</div>
+                    <div>Invoice IDs redacted:</div>
+                    <div style={{ fontWeight: '600' }}>{result.stats.invoice_ids}</div>
                     
-                    <div><strong>Generic IDs redacted:</strong></div>
-                    <div style={{ fontWeight: '600', color: '#7c3aed' }}>{result.stats.generic_ids}</div>
+                    <div>Generic IDs redacted:</div>
+                    <div style={{ fontWeight: '600' }}>{result.stats.generic_ids}</div>
                     
                     <div style={{ 
-                      borderTop: '2px solid #e5e7eb',
+                      borderTop: '1px solid #000',
                       paddingTop: '0.75rem',
                       marginTop: '0.5rem',
                       fontWeight: '700',
@@ -447,11 +617,10 @@ export default function Home() {
                       Total items cloaked:
                     </div>
                     <div style={{
-                      borderTop: '2px solid #e5e7eb',
+                      borderTop: '1px solid #000',
                       paddingTop: '0.75rem',
                       marginTop: '0.5rem',
                       fontWeight: '700',
-                      color: '#7c3aed',
                       fontSize: '1.1rem',
                     }}>
                       {totalRedacted}
@@ -461,12 +630,11 @@ export default function Home() {
 
                 <div style={{
                   fontSize: '0.8rem',
-                  color: '#6b7280',
+                  color: '#666',
                   textAlign: 'center',
-                  fontStyle: 'italic',
                   lineHeight: '1.4',
                 }}>
-                  🔒 Sonomos AI does not store or transmit your original input. Sanitization happens server-side only.
+                  Sonomos AI does not store or transmit your original input. Sanitization happens server-side only.
                 </div>
               </div>
             )}
@@ -476,43 +644,41 @@ export default function Home() {
         {/* Error Display */}
         {error && (
           <div style={{
-            backgroundColor: '#fee2e2',
-            border: '2px solid #ef4444',
-            borderRadius: '8px',
+            backgroundColor: '#fee',
+            border: '1px solid #000',
+            borderRadius: '2px',
             padding: '1rem',
-            marginBottom: '1rem',
-            color: '#991b1b',
+            marginBottom: '2rem',
+            color: '#c00',
           }}>
             <strong>Error:</strong> {error}
           </div>
         )}
 
-        {/* Footer Info */}
+        {/* How It Works Section */}
         <div style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '12px',
-          padding: '1.5rem',
-          color: 'white',
+          maxWidth: '800px',
+          margin: '3rem auto 0',
+          padding: '2rem',
+          borderTop: '1px solid #000',
           textAlign: 'center',
         }}>
           <h3 style={{
-            fontSize: '1.1rem',
+            fontSize: '1.2rem',
             fontWeight: '600',
-            marginBottom: '0.75rem',
+            marginBottom: '1rem',
+            color: '#000',
           }}>
             How It Works
           </h3>
           <p style={{
             fontSize: '0.95rem',
             lineHeight: '1.6',
-            opacity: 0.9,
-            maxWidth: '800px',
-            margin: '0 auto',
+            color: '#333',
           }}>
             Sonomos AI uses advanced AI to detect emails, phone numbers, payment details, IDs, and other sensitive data in your text. 
             It replaces them with placeholders or masks them before you send to ChatGPT, Gemini, or any AI system. 
-            <strong> We only show counts and placeholders—never store or show your raw data.</strong>
+            We only show counts and placeholders—never store or show your raw data.
           </p>
         </div>
       </div>
